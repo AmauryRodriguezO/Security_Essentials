@@ -41,7 +41,6 @@
             android:ems="10"
             android:hint="Digite su clave de acceso..."
             android:inputType="textPassword"
-            android:text="Name"
             android:textSize="18sp" />
 
         <Button

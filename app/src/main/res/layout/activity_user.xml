@@ -50,5 +50,32 @@
             android:ems="10"
             android:inputType="textPersonName"
             android:text="Name" />
+
+        <EditText
+            android:id="@+id/nomcomusu2"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:ems="10"
+            android:inputType="textPersonName"
+            android:text="Name" />
+
+        <EditText
+            android:id="@+id/coreleusu2"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:ems="10"
+            android:inputType="textPersonName"
+            android:text="Name" />
+
+        <TextView
+            android:id="@+id/textView"
+            android:layout_width="match_parent"
+            android:layout_height="48dp" />
+
+        <Button
+            android:id="@+id/btncerrarsesion"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="cerrar sesion" />
     </LinearLayout>
 </android.support.constraint.ConstraintLayout>

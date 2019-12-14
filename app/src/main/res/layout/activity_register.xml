@@ -32,6 +32,7 @@
             android:ems="10"
             android:hint="Digite su Correo Electronico..."
             android:inputType="textEmailAddress"
+            android:maxLength="50"
             android:textSize="18sp" />
 
         <EditText
@@ -40,7 +41,9 @@
             android:layout_height="wrap_content"
             android:ems="10"
             android:hint="Digite su Nueva Clave"
-            android:inputType="textPassword" />
+            android:inputType="textPassword"
+            android:maxLength="10"
+            android:password="true" />
 
         <EditText
             android:id="@+id/claaccusu2"
@@ -48,7 +51,9 @@
             android:layout_height="wrap_content"
             android:ems="10"
             android:hint="Repita la clave de acceso"
-            android:inputType="textPassword" />
+            android:inputType="textPassword"
+            android:maxLength="10"
+            android:password="true" />
 
         <Button
             android:id="@+id/btnregister"

@@ -1,5 +1,6 @@
 package com.thinkingsoft.security_essentials;
 
+import android.annotation.SuppressLint;
 import android.content.Intent;
 import android.support.annotation.NonNull;
 import android.support.v7.app.AppCompatActivity;
@@ -17,6 +18,11 @@ import com.google.android.gms.tasks.Task;
 import com.google.firebase.auth.AuthResult;
 import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.auth.FirebaseUser;
+
+import java.nio.charset.StandardCharsets;
+
+import javax.crypto.Cipher;
+import javax.crypto.spec.SecretKeySpec;
 
 public class MainActivity extends AppCompatActivity
 {
@@ -37,13 +43,11 @@ public class MainActivity extends AppCompatActivity
         oenlforreg = findViewById(R.id.enlforreg);
         obtnlogin = findViewById(R.id.btnlogin);
 
-        // Initialize Firebase Auth
         ofirebaseAuth = FirebaseAuth.getInstance();
 
         obtnlogin.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
-                //startActivity(new Intent(MainActivity.this,HomeActivity.class));
                 Autenticar_Usuario();
             }
         });
@@ -53,8 +57,6 @@ public class MainActivity extends AppCompatActivity
                 startActivity(new Intent(MainActivity.this,ActivityRegister.class));
             }
         });
-
-        //signOut();
         informationUser();
     }
 
@@ -65,26 +67,29 @@ public class MainActivity extends AppCompatActivity
                     @Override
                     public void onComplete(@NonNull Task<AuthResult> task) {
                         if (task.isSuccessful()) {
-                            // Sign in success, update UI with the signed-in user's information
                             Log.d("signIn", "signInWithEmail:success");
-                            //FirebaseUser user = firebaseAuth.getCurrentUser();
                             startActivity(new Intent(MainActivity.this, ActivityUser.class));
-                            //updateUI(user);
                         } else {
-                            // If sign in fails, display a message to the user.
                             Toast.makeText(MainActivity.this, "Authentication failed.",
                                     Toast.LENGTH_SHORT).show();
-                            //updateUI(null);
                         }
-
-                        // ...
                     }
                 });
     }
 
     private void Autenticar_Usuario(){
         if (validar_datos_entrada()) {
-            signIn(ocoreleusu.getText().toString().trim(),oclaaccusu.getText().toString().trim());
+            try {
+                @SuppressLint("GetInstance") Cipher cipher = Cipher.getInstance("AES/ECB/PKCS5Padding");
+                SecretKeySpec clave = new SecretKeySpec("9876543210123456".getBytes(), "AES");
+                cipher.init(Cipher.ENCRYPT_MODE, clave);
+                String claaccusu = android.util.Base64.encodeToString(cipher.doFinal(
+                        oclaaccusu.getText().toString().trim().getBytes(StandardCharsets.UTF_8)),32);
+                signIn(ocoreleusu.getText().toString().trim(),claaccusu);
+            } catch (Exception e) {
+                e.printStackTrace();
+                Toast.makeText(getApplicationContext(), "Error al iniciar sesion", Toast.LENGTH_LONG).show();
+            }
 
         }
         else
@@ -121,6 +126,4 @@ public class MainActivity extends AppCompatActivity
         }
         return estado;
     }
-
-
 }

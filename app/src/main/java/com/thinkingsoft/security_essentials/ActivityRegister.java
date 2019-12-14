@@ -6,6 +6,7 @@ import android.support.annotation.NonNull;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
 import android.text.TextUtils;
+import android.util.Log;
 import android.view.View;
 import android.widget.Button;
 import android.widget.EditText;
@@ -16,29 +17,23 @@ import com.google.android.gms.tasks.OnCompleteListener;
 import com.google.android.gms.tasks.Task;
 import com.google.firebase.auth.AuthResult;
 import com.google.firebase.auth.FirebaseAuth;
+import com.google.firebase.database.DatabaseReference;
+import com.google.firebase.database.FirebaseDatabase;
 
 import java.nio.charset.StandardCharsets;
-import java.security.InvalidKeyException;
-import java.security.InvalidParameterException;
-import java.security.NoSuchAlgorithmException;
-import java.util.Arrays;
+import java.util.Objects;
 
-import javax.crypto.BadPaddingException;
 import javax.crypto.Cipher;
-import javax.crypto.IllegalBlockSizeException;
-import javax.crypto.NoSuchPaddingException;
-import javax.crypto.SecretKey;
 import javax.crypto.spec.SecretKeySpec;
 
 public class ActivityRegister extends AppCompatActivity
 {
-    Button obtnregister;
     private EditText ocoreleusu;
     private EditText oclaaccusu1;
     private EditText oclaaccusu2;
-    private TextView oenlforlog;
 
     private FirebaseAuth omAuth;
+    private DatabaseReference odatabase;
 
     @Override
     protected void onCreate(Bundle savedInstanceState)
@@ -47,12 +42,13 @@ public class ActivityRegister extends AppCompatActivity
         setContentView(R.layout.activity_register);
 
         omAuth = FirebaseAuth.getInstance();
+        odatabase = FirebaseDatabase.getInstance().getReference();
 
+        Button obtnregister = findViewById(R.id.btnregister);
         ocoreleusu = findViewById(R.id.coreleusu);
         oclaaccusu1 = findViewById(R.id.claaccusu1);
         oclaaccusu2 = findViewById(R.id.claaccusu2);
-        obtnregister = findViewById(R.id.btnregister);
-        oenlforlog = findViewById(R.id.enlforlog);
+        TextView oenlforlog = findViewById(R.id.enlforlog);
 
         obtnregister.setOnClickListener(new View.OnClickListener()
         {
@@ -65,15 +61,15 @@ public class ActivityRegister extends AppCompatActivity
                 if (validar_datos_registro())
                 {
                     if (verificar_claves()){
-                        //SecretKeySpec palabraclave = generar_clave();
                         try {
-                            //byte[] passEncrypted;
-                            //passEncrypted = cifrar_mensaje(claaccusudig, palabraclave);
-                            //String passDecrypted = descifrar_mensaje(passEncrypted, palabraclave);
-                            registrar_cuenta(coreleusudig , claaccusudig);
+                            @SuppressLint("GetInstance") Cipher cipher = Cipher.getInstance("AES/ECB/PKCS5Padding");
+                            SecretKeySpec clave = new SecretKeySpec("9876543210123456".getBytes(), "AES");
+                            cipher.init(Cipher.ENCRYPT_MODE, clave);
+                            String passEncriptada = android.util.Base64.encodeToString(cipher.doFinal(claaccusudig.getBytes(StandardCharsets.UTF_8)),32);
+                            registrar_cuenta(coreleusudig , passEncriptada);
                         } catch (Exception e) {
                             e.printStackTrace();
-                            Toast.makeText(getApplicationContext(), e.getLocalizedMessage() + "  error", Toast.LENGTH_LONG).show();
+                            Toast.makeText(getApplicationContext(), "Error al registrar", Toast.LENGTH_LONG).show();
                         }
                     }
                     else Toast.makeText(getApplicationContext(), "Las contraseñas no coinciden", Toast.LENGTH_LONG).show();
@@ -95,28 +91,51 @@ public class ActivityRegister extends AppCompatActivity
     }
 
 
-    public SecretKeySpec generar_clave()
+    private String obtenerNombreDeEmail(String email) {
+        if (email.contains("@")) {
+            return email.split("@")[0];
+        } else {
+            return email;
+        }
+    }
+
+    private void registrar_Usuario(String uid, String email, String name) {
+        Usuario usuario = new Usuario(uid, email, name);
+        odatabase.child("USER").child(uid).setValue(usuario);
+    }
+
+    private void registrar_cuenta(final String correoRegistrar, String passwordRegistrar)
     {
-        String clave = "9876543210123456";
-        return new SecretKeySpec(clave.getBytes(), "AES");
+        omAuth.createUserWithEmailAndPassword(correoRegistrar, passwordRegistrar)
+                .addOnCompleteListener(this, new OnCompleteListener<AuthResult>()
+                {
+                    @Override
+                    public void onComplete(@NonNull Task<AuthResult> task) {
+                        if (task.isSuccessful()) {
+                            String uid = Objects.requireNonNull(task.getResult()).getUser().getUid();
+                            String nombre = obtenerNombreDeEmail(correoRegistrar);
+                            registrar_Usuario(uid, correoRegistrar,nombre);
+                            registrar_Usuario_Sqlite(nombre, correoRegistrar, uid);
+                            Toast.makeText(ActivityRegister.this, "Autenticacion exitosa", Toast.LENGTH_SHORT).show();
+                            startActivity(new Intent(ActivityRegister.this,ActivityUser.class));
+                        } else {
+                            // If sign in fails, display a message to the user.
+                            Toast.makeText(ActivityRegister.this, "La autenticacion fallida", Toast.LENGTH_SHORT).show();
+                        }
+                    }
+                });
     }
 
-    public byte[] cifrar_mensaje(String message, SecretKey key) throws Exception
+    private void registrar_Usuario_Sqlite(String nombre, String correo, String uid)
     {
-        @SuppressLint("GetInstance") Cipher cipher = Cipher.getInstance("AES/ECB/PKCS5Padding");
-        cipher.init(Cipher.ENCRYPT_MODE, key);
-        return cipher.doFinal(message.getBytes(StandardCharsets.UTF_8));
+        DBHelper dbHelper = new DBHelper(getApplicationContext());
+        try{
+            dbHelper.insertRow(nombre, correo, uid);
+        }
+        catch (Exception e){
+            Log.d("TAG", "registrar_Usuario_Sqlite: "+e.getMessage());
+        }
     }
-
-    @SuppressLint("GetInstance")
-    public static String descifrar_mensaje(byte[] cipherText, SecretKey secret) throws NoSuchAlgorithmException, NoSuchPaddingException, InvalidKeyException, InvalidParameterException, IllegalBlockSizeException, BadPaddingException {
-        Cipher cipher;
-        cipher = Cipher.getInstance("AES/ECB/PKCS5Padding");
-        cipher.init(Cipher.DECRYPT_MODE, secret);
-        return new String(cipher.doFinal(cipherText), StandardCharsets.UTF_8);
-    }
-
-
 
     private boolean validar_datos_registro()
     {
@@ -158,8 +177,8 @@ public class ActivityRegister extends AppCompatActivity
         return estado;
     }
 
-
-    private boolean verificar_claves(){
+    private boolean verificar_claves()
+    {
         boolean estado = true;
         String lclaaccusu1 = oclaaccusu1.getText().toString();
         String lclaaccusu2 = oclaaccusu2.getText().toString();
@@ -176,25 +195,4 @@ public class ActivityRegister extends AppCompatActivity
         }
         return estado;
     }
-
-    private void registrar_cuenta(String emailCreate, String passwordCreate)
-    {
-      omAuth.createUserWithEmailAndPassword(emailCreate, passwordCreate)
-                .addOnCompleteListener(this, new OnCompleteListener<AuthResult>()
-                {
-                    @Override
-                    public void onComplete(@NonNull Task<AuthResult> task) {
-                        Toast.makeText(ActivityRegister.this, "OnComplete", Toast.LENGTH_SHORT).show();
-                        if (task.isSuccessful()) {
-                            // Sign in success, update UI with the signed-in user's information
-                            Toast.makeText(ActivityRegister.this, "Authentication exist.", Toast.LENGTH_SHORT).show();
-
-                        } else {
-                            // If sign in fails, display a message to the user.
-                            Toast.makeText(ActivityRegister.this, "Authentication failed.", Toast.LENGTH_SHORT).show();
-                        }
-                    }
-                });
-    }
-
 }
